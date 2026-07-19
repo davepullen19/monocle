@@ -2,9 +2,15 @@ name: Thames Lido watch
 
 on:
   schedule:
-    # Every 30 min (times are UTC). GitHub may delay scheduled runs under load.
-    - cron: '*/30 * * * *'
-  workflow_dispatch: {}   # adds a manual "Run workflow" button
+    # Every 5 min (times are UTC). GitHub often delays/coalesces tight schedules
+    # under load, so real spacing may be a bit longer than 5 min.
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+    inputs:
+      test_email:
+        description: 'Send a test email to confirm the SMTP secrets work'
+        type: boolean
+        default: false
 
 permissions:
   contents: write         # needed to commit state.json back to the repo
@@ -22,6 +28,20 @@ jobs:
       WATCH_DATE: ${{ vars.WATCH_DATE || '2026-08-31' }}
       WATCH_PARTY: ${{ vars.WATCH_PARTY || '4,6' }}
     steps:
+      - name: Send test email
+        if: github.event_name == 'workflow_dispatch' && inputs.test_email == true
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          secure: false
+          username: ${{ secrets.SMTP_USER }}
+          password: ${{ secrets.SMTP_PASS }}
+          from: Thames Lido Watcher <${{ secrets.SMTP_USER }}>
+          to: ${{ secrets.SMTP_TO }}
+          subject: "✅ Monocle watcher — test email"
+          body: "If you're reading this, the GitHub Actions watcher can email you. The real alerts will look like this."
+
       - uses: actions/checkout@v5
 
       - uses: actions/setup-node@v5
