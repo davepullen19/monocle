@@ -33,9 +33,9 @@ Add three (these are the same Gmail app-password values you already use locally)
 
 | Secret name | Value |
 |---|---|
-| `SMTP_USER` | `dpullen19@gmail.com` |
+| `SMTP_USER` | your Gmail address (the account the app password belongs to) |
 | `SMTP_PASS` | your 16-char Gmail app password (no spaces) |
-| `SMTP_TO`   | `dpullen19@gmail.com` |
+| `SMTP_TO`   | the address that should receive the alerts |
 
 Secrets are encrypted and never shown in logs — safe even in a public repo.
 
