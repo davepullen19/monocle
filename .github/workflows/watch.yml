@@ -2,9 +2,12 @@ name: Thames Lido watch
 
 on:
   schedule:
-    # Every 5 min (times are UTC). GitHub often delays/coalesces tight schedules
-    # under load, so real spacing may be a bit longer than 5 min.
-    - cron: '*/5 * * * *'
+    # Availability check, ~every 5 min. Offset off the :00/:05 boundary so we're
+    # not competing with the top-of-hour stampede (more ticks actually land).
+    # GitHub schedules are best-effort and may still be delayed/coalesced.
+    - cron: '2-59/5 * * * *'
+    # Daily "still watching" heartbeat at 08:00 UTC.
+    - cron: '0 8 * * *'
   workflow_dispatch:
     inputs:
       test_email:
@@ -63,6 +66,24 @@ jobs:
       - name: Run watcher
         id: watch
         run: node watch.js
+
+      - name: Daily heartbeat email
+        if: github.event.schedule == '0 8 * * *'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          secure: false
+          username: ${{ secrets.SMTP_USER }}
+          password: ${{ secrets.SMTP_PASS }}
+          from: Thames Lido Watcher <${{ secrets.SMTP_USER }}>
+          to: ${{ secrets.SMTP_TO }}
+          subject: "🫀 Monocle still watching ${{ env.WATCH_DATE }} (party ${{ env.WATCH_PARTY }})"
+          body: |
+            The watcher is alive and running on schedule.
+            Target: ${{ env.WATCH_DATE }}, party ${{ env.WATCH_PARTY }}.
+            Latest check: available=${{ steps.watch.outputs.available }}.
+            You'll still get a separate alert the moment this changes.
 
       - name: Email me on change
         if: steps.watch.outputs.changed == 'true'
