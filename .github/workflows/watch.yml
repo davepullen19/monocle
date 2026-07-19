@@ -1,0 +1,67 @@
+name: Thames Lido watch
+
+on:
+  schedule:
+    # Every 30 min (times are UTC). GitHub may delay scheduled runs under load.
+    - cron: '*/30 * * * *'
+  workflow_dispatch: {}   # adds a manual "Run workflow" button
+
+permissions:
+  contents: write         # needed to commit state.json back to the repo
+
+concurrency:
+  group: thameslido-watch
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    env:
+      # Override these two by setting repo Variables (Settings → Secrets and
+      # variables → Actions → Variables). Falls back to the defaults otherwise.
+      WATCH_DATE: ${{ vars.WATCH_DATE || '2026-08-31' }}
+      WATCH_PARTY: ${{ vars.WATCH_PARTY || '4,6' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Cache Playwright browser
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package.json') }}
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run watcher
+        id: watch
+        run: node watch.js
+
+      - name: Email me on change
+        if: steps.watch.outputs.changed == 'true'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          secure: false
+          username: ${{ secrets.SMTP_USER }}
+          password: ${{ secrets.SMTP_PASS }}
+          from: Thames Lido Watcher <${{ secrets.SMTP_USER }}>
+          to: ${{ secrets.SMTP_TO }}
+          subject: ${{ steps.watch.outputs.subject }}
+          body: ${{ steps.watch.outputs.body }}
+
+      - name: Commit updated state
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add state.json
+          git diff --staged --quiet || git commit -m "state: ${WATCH_DATE} party ${WATCH_PARTY} [skip ci]"
+          git push

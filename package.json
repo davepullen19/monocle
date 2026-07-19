@@ -1,0 +1,16 @@
+{
+  "name": "thameslido-watch",
+  "version": "1.0.0",
+  "description": "Scheduled Thames Lido Swim & Lunch availability watcher, hosted free on GitHub Actions",
+  "main": "check.js",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "check": "node check.js",
+    "watch": "node watch.js"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "playwright": "^1.61.1"
+  }
+}
